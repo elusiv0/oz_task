@@ -1,0 +1,45 @@
+schema:
+  - internal/graph/schema/*.graphql
+
+exec:
+  filename: internal/graph/generated.go
+  package: graph
+
+model:
+  filename: internal/graph/models_gen.go
+  package: graph
+
+resolver:
+  layout: follow-schema
+  dir: internal/graph/resolver
+  package: resolver
+  filename_template: "{name}.resolvers.go"
+  # Optional: turn on to not generate template comments above resolvers
+  # omit_template_comment: false
+
+
+autobind:
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32
+  Post:
+    model: github.com/elusiv0/oz_task/internal/dto.Post
+  Comment:
+    model: github.com/elusiv0/oz_task/internal/dto.Comment
+  Timestamp:
+    model: github.com/elusiv0/oz_task/internal/dto.Timestamp
+  NewPost:
+    model: github.com/elusiv0/oz_task/internal/dto.NewPost
+  NewComment:
+    model: github.com/elusiv0/oz_task/internal/dto.NewComment
+  
+  

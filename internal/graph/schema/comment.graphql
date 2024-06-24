@@ -1,0 +1,24 @@
+type Comment {
+  id: ID!
+  text: String!
+  articleId: ID!
+  parentId: ID
+  createdAt: Timestamp!
+  comments(first: Int = 10, after: ID): CommentConnection
+}
+
+type CommentEdge {
+  node: Comment
+  cursor: ID!
+}
+
+type CommentConnection {
+  edges: [CommentEdge!]!
+  pageInfo: PageInfo!
+}
+
+input NewComment {
+  text: String!
+  articleId: ID!
+  parentId: ID
+}

@@ -1,0 +1,22 @@
+type Query {
+  posts(first: Int = 10, after: ID): PostConnection
+  post(id: ID): Post!
+  comment(id: ID) : Comment!
+}
+
+type Mutation {
+  createPost(input: NewPost!): Post!
+  createComment(input: NewComment!): Comment!
+}
+
+type PageInfo {
+  startCursor: ID!
+  endCursor: ID!
+  hasNextPage: Boolean
+}
+
+type Subscription {
+  newComments(postId: ID!): Comment!
+}
+
+scalar Timestamp

@@ -1,0 +1,33 @@
+services:
+  oz_task_service:
+    build: ./
+    command: ./oz_task
+    ports:
+      - 8080:8080
+    depends_on:
+      - oz_task_postgres
+    environment:
+      ENV: ${ENV}
+      DB: ${DB}
+      HTTP_PORT: ${ENV}
+      HTTP_READTIMEOUT: ${HTTP_READTIMEOUT}
+      HTTP_WRITETIMEOUT: ${HTTP_WRITETIMEOUT}
+      HTTP_SHUTDOWNTIMEOUT: ${HTTP_SHUTDOWNTIMEOUT}
+      PG_HOST: "172.21.0.2"
+      PG_PORT: ${PG_PORT}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_NAME: ${PG_NAME}
+      PG_CONNECTION_TIMEOUT: ${PG_CONNECTION_TIMEOUT}
+      PG_CONNECTION_ATTEMPTS: ${PG_CONNECTION_ATTEMPTS}
+  oz_task_postgres:
+    image: postgres
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/1-schema.sql
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_NAME}
+    ports:
+      - 5432:5432
