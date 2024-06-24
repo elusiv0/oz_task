@@ -8,6 +8,5 @@ import (
 )
 
 func some() {
-	errors.Unwrap()
-	fmt.Errorf()
+	
 }
