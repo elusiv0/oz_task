@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/elusiv0/oz_task/internal/app"
 	"github.com/elusiv0/oz_task/internal/config"
+	"github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph"
 	resolver "github.com/elusiv0/oz_task/internal/graph/resolver"
 	"github.com/elusiv0/oz_task/internal/repo"
@@ -79,6 +84,18 @@ func main() {
 	gConfig.Complexity.Post.Comments = countComplexity
 	gConfig.Complexity.Query.Posts = countComplexity
 	gConfig.Complexity.Comment.Comments = countComplexity
+	gConfig.Directives.Length = func(ctx context.Context, obj interface{}, next graphql.Resolver, max int) (res interface{}, err error) {
+		commentInput := obj.(map[string]any)
+		commentText := commentInput["text"].(string)
+		lenT := len([]rune(commentText))
+		if lenT > max {
+			return nil, dto.NewCustomError(dto.ErrInfo{
+				ErrorMessage: fmt.Sprintf("length %d of text is more than max length of text %d", lenT, max),
+				StatusCode:   http.StatusForbidden,
+			}, nil)
+		}
+		return next(ctx)
+	}
 
 	//building router
 	router := router.InitRoutes(logger, gConfig, commentService)

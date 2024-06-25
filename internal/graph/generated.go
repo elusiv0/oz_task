@@ -49,6 +49,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Length func(ctx context.Context, obj interface{}, next graphql.Resolver, max int) (res interface{}, err error)
 }
 
 type ComplexityRoot struct {
@@ -537,6 +538,21 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) dir_length_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["max"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("max"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["max"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_Comment_comments_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
@@ -4163,11 +4179,28 @@ func (ec *executionContext) unmarshalInputNewComment(ctx context.Context, obj in
 		switch k {
 		case "text":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
-			data, err := ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
+			directive0 := func(ctx context.Context) (interface{}, error) { return ec.unmarshalNString2string(ctx, v) }
+			directive1 := func(ctx context.Context) (interface{}, error) {
+				max, err := ec.unmarshalNInt2int(ctx, 10)
+				if err != nil {
+					return nil, err
+				}
+				if ec.directives.Length == nil {
+					return nil, errors.New("directive length is not implemented")
+				}
+				return ec.directives.Length(ctx, obj, directive0, max)
 			}
-			it.Text = data
+
+			tmp, err := directive1(ctx)
+			if err != nil {
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
+			if data, ok := tmp.(string); ok {
+				it.Text = data
+			} else {
+				err := fmt.Errorf(`unexpected type %T from directive, should be string`, tmp)
+				return it, graphql.ErrorOnPath(ctx, err)
+			}
 		case "articleId":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("articleId"))
 			data, err := ec.unmarshalOID2int(ctx, v)
@@ -5267,6 +5300,21 @@ func (ec *executionContext) unmarshalNID2int(ctx context.Context, v interface{})
 }
 
 func (ec *executionContext) marshalNID2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
+	res := graphql.MarshalInt(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
+	res, err := graphql.UnmarshalInt(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
 	res := graphql.MarshalInt(v)
 	if res == graphql.Null {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {

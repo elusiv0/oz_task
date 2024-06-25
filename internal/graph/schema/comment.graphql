@@ -18,7 +18,9 @@ type CommentConnection {
 }
 
 input NewComment {
-  text: String!
+  text: String! @length(max: 10)
   articleId: ID
   parentId: ID
 }
+
+directive @length(max: Int!) on INPUT_FIELD_DEFINITION
