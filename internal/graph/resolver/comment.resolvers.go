@@ -28,7 +28,7 @@ func (r *commentResolver) Comments(ctx context.Context, obj *model.Comment, firs
 	logger.Debug("calling comment service...")
 	commentsResp, err := gqlmiddleware.GetCommentLoader(ctx).Load(commentsReq)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return &graph.CommentConnection{}, gqlErr
 	}

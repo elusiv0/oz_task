@@ -42,7 +42,7 @@ func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*gra
 	logger.Debug("calling post service...")
 	postResp, err := r.postService.GetMany(ctx, postsReq)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Posts: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Posts: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return &graph.PostConnection{}, gqlErr
 	}
@@ -60,7 +60,7 @@ func (r *queryResolver) Post(ctx context.Context, id *int) (*model.Post, error) 
 	logger.Debug("calling post service...")
 	postResp, err := r.postService.Get(ctx, *id)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return postResp, gqlErr
 	}
@@ -75,7 +75,7 @@ func (r *queryResolver) Comment(ctx context.Context, id *int) (*model.Comment, e
 	logger.Debug("calling comment service...")
 	commentResp, err := r.commentService.Get(ctx, *id)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return commentResp, gqlErr
 	}

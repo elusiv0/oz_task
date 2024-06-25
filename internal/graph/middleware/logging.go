@@ -27,6 +27,9 @@ func LoggingMiddleware(logger *slog.Logger) graphql.ResponseMiddleware {
 			level = slog.LevelWarn
 		}
 		logger.LogAttrs(ctx, level, "incoming request", slog.String("status", status))
+		resp.Extensions = map[string]any{
+			"request_id": reqUuid,
+		}
 		return resp
 	}
 }

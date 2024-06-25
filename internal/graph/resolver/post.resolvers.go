@@ -28,7 +28,7 @@ func (r *postResolver) Comments(ctx context.Context, obj *model.Post, first *int
 	logger.Debug("calling comment service...")
 	commentsResp, err := gqlmiddleware.GetCommentLoader(ctx).Load(commentsReq)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return &graph.CommentConnection{}, gqlErr
 	}
@@ -41,19 +41,19 @@ func (r *postResolver) Comments(ctx context.Context, obj *model.Post, first *int
 
 // CreateComment is the resolver for the createComment field.
 func (r *postResolver) CreateComment(ctx context.Context, obj *model.Post, input model.NewComment) (*model.Comment, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
 	if obj.Closed {
 		err := model.NewCustomError(PostClosedErr, nil)
-		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return &model.Comment{}, gqlErr
 	}
 	input.ArticleID = obj.ID
-	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
 
 	logger.Debug("calling comment service...")
 	commentResp, err := r.commentService.Insert(ctx, input)
 	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
+		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return commentResp, gqlErr
 	}

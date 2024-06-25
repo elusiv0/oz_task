@@ -7,7 +7,6 @@ import (
 
 	"github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph/dataloader"
-	repo "github.com/elusiv0/oz_task/internal/repo"
 	"github.com/elusiv0/oz_task/internal/service"
 )
 
@@ -81,11 +80,7 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 					}
 				}
 				errorsResp := make([]error, len(commentReqs))
-				for idx, val := range commentsDto {
-					if len(val) < 2 {
-						errorsResp[idx] = dto.NewCustomError(repo.CommentsNotFoundErr, commentReqs[idx])
-					}
-				}
+
 				return commentsDto, errorsResp
 			},
 		}

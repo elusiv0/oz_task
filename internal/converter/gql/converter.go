@@ -10,6 +10,9 @@ import (
 )
 
 func ToPostConnection(postDto []*dto.Post, first int, after *int) *graph.PostConnection {
+	if len(postDto) == 0 {
+		return nil
+	}
 	var edges []*graph.PostEdge
 	hasNext := false
 	if len(postDto) > first {
@@ -36,6 +39,9 @@ func toPostEdge(postDto *dto.Post) *graph.PostEdge {
 }
 
 func ToCommentConnection(commentDto []*dto.Comment, first int, after *int) *graph.CommentConnection {
+	if len(commentDto) == 0 {
+		return nil
+	}
 	var edges []*graph.CommentEdge
 	hasNext := false
 	if len(commentDto) > first {
