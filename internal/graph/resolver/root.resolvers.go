@@ -30,26 +30,6 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.NewPost) 
 	return postResp, nil
 }
 
-// CreateComment is the resolver for the createComment field.
-func (r *mutationResolver) CreateComment(ctx context.Context, input model.NewComment) (*model.Comment, error) {
-	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
-
-	logger.Debug("calling comment service...")
-	commentResp, err := r.commentService.Insert(ctx, input)
-	if err != nil {
-		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
-		gqlErr := handleError(ctx, err)
-		return commentResp, gqlErr
-	}
-
-	logger.Debug("sending comment response to subscribe channel...")
-	for _, ch := range r.postsSubscribers[commentResp.ArticleID] {
-		ch <- commentResp
-	}
-
-	return commentResp, nil
-}
-
 // Posts is the resolver for the posts field.
 func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*graph.PostConnection, error) {
 	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))

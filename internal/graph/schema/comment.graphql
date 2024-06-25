@@ -19,6 +19,6 @@ type CommentConnection {
 
 input NewComment {
   text: String!
-  articleId: ID!
+  articleId: ID
   parentId: ID
 }

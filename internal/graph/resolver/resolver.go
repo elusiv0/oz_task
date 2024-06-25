@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"sync"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -12,6 +13,13 @@ import (
 	"github.com/elusiv0/oz_task/internal/service"
 	"github.com/elusiv0/oz_task/internal/util"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+)
+
+var (
+	PostClosedErr = model.ErrInfo{
+		ErrorMessage: "post closed to add comments",
+		StatusCode:   http.StatusForbidden,
+	}
 )
 
 type Resolver struct {

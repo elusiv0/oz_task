@@ -6,7 +6,6 @@ type Query {
 
 type Mutation {
   createPost(input: NewPost!): Post!
-  createComment(input: NewComment!): Comment!
 }
 
 type PageInfo {

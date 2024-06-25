@@ -39,6 +39,33 @@ func (r *postResolver) Comments(ctx context.Context, obj *model.Post, first *int
 	return commentConn, nil
 }
 
+// CreateComment is the resolver for the createComment field.
+func (r *postResolver) CreateComment(ctx context.Context, obj *model.Post, input model.NewComment) (*model.Comment, error) {
+	if obj.Closed {
+		err := model.NewCustomError(PostClosedErr, nil)
+		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		gqlErr := handleError(ctx, err)
+		return &model.Comment{}, gqlErr
+	}
+	input.ArticleID = obj.ID
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment service...")
+	commentResp, err := r.commentService.Insert(ctx, input)
+	if err != nil {
+		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
+		gqlErr := handleError(ctx, err)
+		return commentResp, gqlErr
+	}
+
+	logger.Debug("sending comment response to subscribe channel...")
+	for _, ch := range r.postsSubscribers[commentResp.ArticleID] {
+		ch <- commentResp
+	}
+
+	return commentResp, nil
+}
+
 // Post returns graph.PostResolver implementation.
 func (r *Resolver) Post() graph.PostResolver { return &postResolver{r} }
 

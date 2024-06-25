@@ -5,6 +5,7 @@ extend type Post {
   closed: Boolean!
   createdAt: Timestamp!
   comments(first: Int = 10, after: ID): CommentConnection
+  createComment(input: NewComment!): Comment!
 }
 
 type PostEdge {
