@@ -94,7 +94,7 @@ func main() {
 	//building app
 	app := app.New(httpserver, logger)
 
-	logger.Info("Starting app...")
+	logger.Info("Starting app on on port" + config.Http.Port + "...")
 	if err := app.Run(); err != nil {
 		log.Fatal("error with starting app" + err.Error())
 	}
