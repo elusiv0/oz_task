@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"net"
 	"time"
 )
 
@@ -15,7 +14,7 @@ func ReadTimeout(t time.Duration) Option {
 
 func Port(p string) Option {
 	return func(s *HttpServer) {
-		s.server.Addr = net.JoinHostPort("localhost", p)
+		s.server.Addr = p
 	}
 }
 

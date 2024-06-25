@@ -1,4 +1,4 @@
-package dataloader
+package middleware
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/elusiv0/oz_task/internal/dto"
+	"github.com/elusiv0/oz_task/internal/graph/dataloader"
 	repo "github.com/elusiv0/oz_task/internal/repo"
 	"github.com/elusiv0/oz_task/internal/service"
 )
@@ -16,7 +17,7 @@ const (
 
 func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		commentLoaderConfig := CommentLoaderConfig{
+		commentLoaderConfig := dataloader.CommentLoaderConfig{
 			MaxBatch: 100,
 			Wait:     5 * time.Millisecond,
 			Fetch: func(commentReqs []dto.GetCommentsRequest) ([][]*dto.Comment, []error) {
@@ -88,13 +89,13 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 				return commentsDto, errorsResp
 			},
 		}
-		commentLoader := NewCommentLoader(commentLoaderConfig)
+		commentLoader := dataloader.NewCommentLoader(commentLoaderConfig)
 
 		ctx := context.WithValue(r.Context(), commentLoaderKey, commentLoader)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func GetCommentLoader(ctx context.Context) *CommentLoader {
-	return ctx.Value(commentLoaderKey).(*CommentLoader)
+func GetCommentLoader(ctx context.Context) *dataloader.CommentLoader {
+	return ctx.Value(commentLoaderKey).(*dataloader.CommentLoader)
 }

@@ -1,30 +1,29 @@
-package route
+package router
 
 import (
 	"log/slog"
 	"net/http"
 
+	"github.com/elusiv0/oz_task/internal/graph"
+	"github.com/elusiv0/oz_task/internal/router/gql"
+	"github.com/elusiv0/oz_task/internal/service"
 	"github.com/gin-gonic/gin"
-	sloggin "github.com/samber/slog-gin"
 )
 
 func InitRoutes(
 	logger *slog.Logger,
+	gqlConf graph.Config,
+	commentService service.CommentService,
 ) *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 
-	router.Use(sloggin.New(logger))
 	router.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"ping": "pong",
 		})
 	})
 
-	//_ := router.Group("/api/v1/orders/")
-	{
-		//orderRouter.NewRouter(orderGroup, cache, logger)
-	}
+	gql.InitRoutes(logger, router, gqlConf, commentService)
 
 	return router
 }

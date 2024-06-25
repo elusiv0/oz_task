@@ -11,7 +11,7 @@ import (
 	gqlconv "github.com/elusiv0/oz_task/internal/converter/gql"
 	model "github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph"
-	"github.com/elusiv0/oz_task/internal/graph/dataloader"
+	"github.com/elusiv0/oz_task/internal/graph/middleware"
 )
 
 // Comments is the resolver for the comments field.
@@ -20,7 +20,7 @@ func (r *commentResolver) Comments(ctx context.Context, obj *model.Comment, firs
 		gqlconv.WithCommentsPagination(*first, after),
 		gqlconv.WithParentId(&obj.ID),
 	)
-	commentsResp, err := dataloader.GetCommentLoader(ctx).Load(commentsReq)
+	commentsResp, err := middleware.GetCommentLoader(ctx).Load(commentsReq)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)

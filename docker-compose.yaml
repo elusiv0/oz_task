@@ -1,26 +1,26 @@
 services:
-  oz_task_service:
+  application:
     build: ./
     command: ./oz_task
     ports:
       - 8080:8080
     depends_on:
-      - oz_task_postgres
+      - pgsql
     environment:
       ENV: ${ENV}
       DB: ${DB}
-      HTTP_PORT: ${ENV}
+      HTTP_PORT: ${HTTP_PORT}
       HTTP_READTIMEOUT: ${HTTP_READTIMEOUT}
       HTTP_WRITETIMEOUT: ${HTTP_WRITETIMEOUT}
       HTTP_SHUTDOWNTIMEOUT: ${HTTP_SHUTDOWNTIMEOUT}
-      PG_HOST: "172.21.0.2"
+      PG_HOST: ${PG_HOST}
       PG_PORT: ${PG_PORT}
       PG_USER: ${PG_USER}
       PG_PASSWORD: ${PG_PASSWORD}
       PG_NAME: ${PG_NAME}
       PG_CONNECTION_TIMEOUT: ${PG_CONNECTION_TIMEOUT}
       PG_CONNECTION_ATTEMPTS: ${PG_CONNECTION_ATTEMPTS}
-  oz_task_postgres:
+  pgsql:
     image: postgres
     volumes:
       - ./data/postgresql:/var/lib/postgresql/data

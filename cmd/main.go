@@ -2,22 +2,20 @@ package main
 
 import (
 	"log"
-	"net/http"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/handler/extension"
-	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/elusiv0/oz_task/internal/app"
 	"github.com/elusiv0/oz_task/internal/config"
 	"github.com/elusiv0/oz_task/internal/graph"
-	"github.com/elusiv0/oz_task/internal/graph/dataloader"
 	resolver "github.com/elusiv0/oz_task/internal/graph/resolver"
 	"github.com/elusiv0/oz_task/internal/repo"
 	imCommentRepo "github.com/elusiv0/oz_task/internal/repo/in-memory/comment"
 	imPostRepo "github.com/elusiv0/oz_task/internal/repo/in-memory/post"
 	pgCommentRepo "github.com/elusiv0/oz_task/internal/repo/postgres/comment"
 	pgPostRepo "github.com/elusiv0/oz_task/internal/repo/postgres/post"
+	"github.com/elusiv0/oz_task/internal/router"
 	commentService "github.com/elusiv0/oz_task/internal/service/comment"
 	postService "github.com/elusiv0/oz_task/internal/service/post"
+	"github.com/elusiv0/oz_task/pkg/httpserver"
 	"github.com/elusiv0/oz_task/pkg/logger"
 	"github.com/elusiv0/oz_task/pkg/postgres"
 	"github.com/joho/godotenv"
@@ -38,6 +36,7 @@ func main() {
 	//building logger
 	logger := logger.New("local")
 
+	//building repo
 	var postRepo repo.PostRepo
 	var commentRepo repo.CommentRepo
 	if config.App.Db == "postgres" {
@@ -65,9 +64,11 @@ func main() {
 		commentRepo = imCommentRepo.New(logger)
 	}
 
+	//building service
 	commentService := commentService.New(commentRepo, logger)
 	postService := postService.New(postRepo, logger)
 
+	//building gql
 	resolver := resolver.NewResolver(commentService, postService, logger)
 	gConfig := graph.Config{
 		Resolvers: resolver,
@@ -78,18 +79,23 @@ func main() {
 	gConfig.Complexity.Post.Comments = countComplexity
 	gConfig.Complexity.Query.Posts = countComplexity
 	gConfig.Complexity.Comment.Comments = countComplexity
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(gConfig))
 
-	srv.Use(extension.FixedComplexityLimit(1500))
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", dataloader.DataloaderMiddleware(commentService, srv))
-	port := "8080"
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	//building router
+	router := router.InitRoutes(logger, gConfig, commentService)
+
+	//building httpserver
+	httpserver := httpserver.New(
+		router,
+		httpserver.Port(config.Http.Port),
+		httpserver.ReadTimeout(config.Http.ReadTimeout),
+		httpserver.ShutdownTimeout(config.Http.ShutdownTimeout),
+	)
+
+	//building app
+	app := app.New(httpserver, logger)
 
 	logger.Info("Starting app...")
-	//if err := app.Run(); err != nil {
-	//	log.Fatal("error with starting app" + err.Error())
-	//}
-
+	if err := app.Run(); err != nil {
+		log.Fatal("error with starting app" + err.Error())
+	}
 }

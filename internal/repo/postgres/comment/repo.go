@@ -42,18 +42,25 @@ const (
 func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, error) {
 	commentModel := &model.Comment{}
 	commentResp := &dto.Comment{}
+
+	c.logger.Debug("initialize transaction...")
 	tx, err := c.db.PgxPool.Begin(ctx)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - Get - begin tx: %w", err)
 	}
+	c.logger.Debug("transation was initialized successfully")
+
 	defer func() {
 		if err != nil {
+			c.logger.Debug("error was handled, rollback transaction")
 			tx.Rollback(ctx)
 			return
 		}
 		err = tx.Commit(ctx)
+		c.logger.Debug("transaction was committed successfully")
 	}()
 
+	c.logger.Debug("building sql...")
 	sql, args, err := c.db.Builder.
 		Select("id", "_text", "article_id", "parent_id", "created_at").
 		From(commentTable).
@@ -62,7 +69,9 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - Get - build sql: %w", err)
 	}
+	c.logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
 
+	c.logger.Debug("executing sql statement...")
 	row := tx.QueryRow(ctx, sql, args...)
 	err = row.Scan(
 		&commentModel.Id, &commentModel.Text,
@@ -76,7 +85,11 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 		}
 		return commentResp, err
 	}
+	c.logger.Debug("sql statement was executed successfully")
+
+	c.logger.Debug("converting comment model to dto...")
 	commentResp = converter.CommentFromRepo(commentModel)
+	c.logger.Debug("model was converted successfully")
 
 	return commentResp, nil
 }
@@ -85,17 +98,25 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetCommentsRequest) ([]*dto.Comment, error) {
 	commentResp := []*dto.Comment{}
 	commentModel := &model.Comment{}
+
+	c.logger.Debug("initialize transaction...")
 	tx, err := c.db.PgxPool.Begin(ctx)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - GetMany - begin tx: %w", err)
 	}
+	c.logger.Debug("transation was initialized successfully")
+
 	defer func() {
 		if err != nil {
+			c.logger.Debug("error was handled, rollback transaction")
 			tx.Rollback(ctx)
 			return
 		}
 		err = tx.Commit(ctx)
+		c.logger.Debug("transaction was committed successfully")
 	}()
+
+	c.logger.Debug("building sql...")
 	var builder *squirrel.SelectBuilder
 	var scanRows []any
 	if len(commentsReq) > 1 {
@@ -108,6 +129,8 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - GetMany - build sql: %w", err)
 	}
+	c.logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
+
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return commentResp, err

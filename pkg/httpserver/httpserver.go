@@ -13,7 +13,7 @@ type HttpServer struct {
 }
 
 const (
-	defaultAddr            = ":80"
+	defaultAddr            = ":8080"
 	defaultReadTimeout     = 5 * time.Second
 	defaultWriteTimeout    = 5 * time.Second
 	deafultShutdownTimeout = 3 * time.Second
@@ -31,7 +31,6 @@ func New(h http.Handler, opts ...Option) *HttpServer {
 		shutdownTimeout: deafultShutdownTimeout,
 		server:          s,
 	}
-
 	for _, opt := range opts {
 		opt(httpserver)
 	}
