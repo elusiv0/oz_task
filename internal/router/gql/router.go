@@ -25,7 +25,6 @@ func InitRoutes(
 ) {
 	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graphConfig))
 	srv.Use(extension.FixedComplexityLimit(1500))
-	srv.AroundOperations(middleware.ReqUuuidMiddleware())
 	srv.AroundResponses(middleware.LoggingMiddleware(logger))
 	router.GET("/", playgroundHandler(playground.Handler("GraphQL playground", "/query")))
 	router.Any("/query", graphqlHandler(middleware.DataloaderMiddleware(commentService, srv)))

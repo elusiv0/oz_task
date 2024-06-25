@@ -31,6 +31,7 @@ func New(h http.Handler, opts ...Option) *HttpServer {
 		shutdownTimeout: deafultShutdownTimeout,
 		server:          s,
 	}
+
 	for _, opt := range opts {
 		opt(httpserver)
 	}

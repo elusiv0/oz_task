@@ -11,11 +11,15 @@ import (
 	gqlconv "github.com/elusiv0/oz_task/internal/converter/gql"
 	model "github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph"
+	"github.com/elusiv0/oz_task/internal/middleware"
 	"github.com/google/uuid"
 )
 
 // CreatePost is the resolver for the createPost field.
 func (r *mutationResolver) CreatePost(ctx context.Context, input model.NewPost) (*model.Post, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment service...")
 	postResp, err := r.postService.Insert(ctx, input)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreatePost: "+err.Error()))
@@ -28,6 +32,9 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.NewPost) 
 
 // CreateComment is the resolver for the createComment field.
 func (r *mutationResolver) CreateComment(ctx context.Context, input model.NewComment) (*model.Comment, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment service...")
 	commentResp, err := r.commentService.Insert(ctx, input)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
@@ -35,6 +42,7 @@ func (r *mutationResolver) CreateComment(ctx context.Context, input model.NewCom
 		return commentResp, gqlErr
 	}
 
+	logger.Debug("sending comment response to subscribe channel...")
 	for _, ch := range r.postsSubscribers[commentResp.ArticleID] {
 		ch <- commentResp
 	}
@@ -44,9 +52,14 @@ func (r *mutationResolver) CreateComment(ctx context.Context, input model.NewCom
 
 // Posts is the resolver for the posts field.
 func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*graph.PostConnection, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("wrapping post request to dto...")
 	postsReq := gqlconv.ToGetPostsRequest(
 		gqlconv.WithPostsPagination(*first, after),
 	)
+
+	logger.Debug("calling post service...")
 	postResp, err := r.postService.GetMany(ctx, postsReq)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Posts: "+err.Error()))
@@ -54,6 +67,7 @@ func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*gra
 		return &graph.PostConnection{}, gqlErr
 	}
 
+	logger.Debug("converting post response to post connection...")
 	postConn := gqlconv.ToPostConnection(postResp, postsReq.First, postsReq.After)
 
 	return postConn, nil
@@ -61,6 +75,9 @@ func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*gra
 
 // Post is the resolver for the post field.
 func (r *queryResolver) Post(ctx context.Context, id *int) (*model.Post, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling post service...")
 	postResp, err := r.postService.Get(ctx, *id)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
@@ -73,6 +90,9 @@ func (r *queryResolver) Post(ctx context.Context, id *int) (*model.Post, error) 
 
 // Comment is the resolver for the comment field.
 func (r *queryResolver) Comment(ctx context.Context, id *int) (*model.Comment, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment service...")
 	commentResp, err := r.commentService.Get(ctx, *id)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
@@ -85,9 +105,11 @@ func (r *queryResolver) Comment(ctx context.Context, id *int) (*model.Comment, e
 
 // NewComments is the resolver for the newComments field.
 func (r *subscriptionResolver) NewComments(ctx context.Context, postID int) (<-chan *model.Comment, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
 	id := uuid.New()
 	comments := make(chan *model.Comment, 1)
 
+	logger.Debug("initializing stop subscription goroutine...")
 	go func() {
 		<-ctx.Done()
 		r.mu.Lock()
@@ -100,6 +122,7 @@ func (r *subscriptionResolver) NewComments(ctx context.Context, postID int) (<-c
 	}
 
 	r.postsSubscribers[postID][id.String()] = comments
+	logger.Debug("subscription is ready")
 
 	return comments, nil
 }

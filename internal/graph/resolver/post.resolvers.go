@@ -11,21 +11,29 @@ import (
 	gqlconv "github.com/elusiv0/oz_task/internal/converter/gql"
 	model "github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph"
-	"github.com/elusiv0/oz_task/internal/graph/middleware"
+	gqlmiddleware "github.com/elusiv0/oz_task/internal/graph/middleware"
+	"github.com/elusiv0/oz_task/internal/middleware"
 )
 
 // Comments is the resolver for the comments field.
 func (r *postResolver) Comments(ctx context.Context, obj *model.Post, first *int, after *int) (*graph.CommentConnection, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("wrapping comment request to dto...")
 	commentsReq := gqlconv.ToGetCommentsRequest(
 		gqlconv.WithCommentsPagination(*first, after),
 		gqlconv.WithPostId(&obj.ID),
 	)
-	commentsResp, err := middleware.GetCommentLoader(ctx).Load(commentsReq)
+
+	logger.Debug("calling comment service...")
+	commentsResp, err := gqlmiddleware.GetCommentLoader(ctx).Load(commentsReq)
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
 		return &graph.CommentConnection{}, gqlErr
 	}
+
+	logger.Debug("converting comment response to post connection...")
 	commentConn := gqlconv.ToCommentConnection(commentsResp, commentsReq.First, commentsReq.After)
 
 	return commentConn, nil

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/elusiv0/oz_task/internal/dto"
+	"github.com/elusiv0/oz_task/internal/middleware"
 	"github.com/elusiv0/oz_task/internal/repo"
 	"github.com/elusiv0/oz_task/internal/service"
 )
@@ -29,6 +30,9 @@ var _ service.CommentService = &CommentService{}
 
 // Get implements service.CommentRepo.
 func (c *CommentService) Get(ctx context.Context, id int) (*dto.Comment, error) {
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("", slog.StringValue("calling comment repo..."))
 	commentResp, err := c.commentRepo.Get(ctx, id)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentService - Get: %w", err)
@@ -39,6 +43,9 @@ func (c *CommentService) Get(ctx context.Context, id int) (*dto.Comment, error) 
 
 // GetMany implements service.CommentRepo.
 func (c *CommentService) GetMany(ctx context.Context, commentReq ...dto.GetCommentsRequest) ([]*dto.Comment, error) {
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment repo...")
 	commentResp, err := c.commentRepo.GetMany(ctx, commentReq...)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentService - GetMany: %w", err)
@@ -49,6 +56,9 @@ func (c *CommentService) GetMany(ctx context.Context, commentReq ...dto.GetComme
 
 // Insert implements service.CommentRepo.
 func (c *CommentService) Insert(ctx context.Context, newComment dto.NewComment) (*dto.Comment, error) {
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling comment repo...")
 	commentResp, err := c.commentRepo.Insert(ctx, newComment)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentService - Insert: %w", err)

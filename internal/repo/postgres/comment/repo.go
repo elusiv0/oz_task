@@ -8,6 +8,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/elusiv0/oz_task/internal/dto"
+	"github.com/elusiv0/oz_task/internal/middleware"
 	"github.com/elusiv0/oz_task/internal/repo"
 	"github.com/elusiv0/oz_task/internal/repo/converter"
 	"github.com/elusiv0/oz_task/internal/repo/model"
@@ -42,25 +43,26 @@ const (
 func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, error) {
 	commentModel := &model.Comment{}
 	commentResp := &dto.Comment{}
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
 
-	c.logger.Debug("initialize transaction...")
+	logger.Debug("initialize transaction...")
 	tx, err := c.db.PgxPool.Begin(ctx)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - Get - begin tx: %w", err)
 	}
-	c.logger.Debug("transation was initialized successfully")
+	logger.Debug("transation was initialized successfully")
 
 	defer func() {
 		if err != nil {
-			c.logger.Debug("error was handled, rollback transaction")
+			logger.Debug("error was handled, rollback transaction")
 			tx.Rollback(ctx)
 			return
 		}
 		err = tx.Commit(ctx)
-		c.logger.Debug("transaction was committed successfully")
+		logger.Debug("transaction was committed successfully")
 	}()
 
-	c.logger.Debug("building sql...")
+	logger.Debug("building sql...")
 	sql, args, err := c.db.Builder.
 		Select("id", "_text", "article_id", "parent_id", "created_at").
 		From(commentTable).
@@ -69,9 +71,9 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - Get - build sql: %w", err)
 	}
-	c.logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
+	logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
 
-	c.logger.Debug("executing sql statement...")
+	logger.Debug("executing sql statement...")
 	row := tx.QueryRow(ctx, sql, args...)
 	err = row.Scan(
 		&commentModel.Id, &commentModel.Text,
@@ -85,11 +87,11 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 		}
 		return commentResp, err
 	}
-	c.logger.Debug("sql statement was executed successfully")
+	logger.Debug("sql statement was executed successfully")
 
-	c.logger.Debug("converting comment model to dto...")
+	logger.Debug("converting comment model to dto...")
 	commentResp = converter.CommentFromRepo(commentModel)
-	c.logger.Debug("model was converted successfully")
+	logger.Debug("model was converted successfully")
 
 	return commentResp, nil
 }
@@ -98,25 +100,26 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetCommentsRequest) ([]*dto.Comment, error) {
 	commentResp := []*dto.Comment{}
 	commentModel := &model.Comment{}
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
 
-	c.logger.Debug("initialize transaction...")
+	logger.Debug("initialize transaction...")
 	tx, err := c.db.PgxPool.Begin(ctx)
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - GetMany - begin tx: %w", err)
 	}
-	c.logger.Debug("transation was initialized successfully")
+	logger.Debug("transation was initialized successfully")
 
 	defer func() {
 		if err != nil {
-			c.logger.Debug("error was handled, rollback transaction")
+			logger.Debug("error was handled, rollback transaction")
 			tx.Rollback(ctx)
 			return
 		}
 		err = tx.Commit(ctx)
-		c.logger.Debug("transaction was committed successfully")
+		logger.Debug("transaction was committed successfully")
 	}()
 
-	c.logger.Debug("building sql...")
+	logger.Debug("building sql...")
 	var builder *squirrel.SelectBuilder
 	var scanRows []any
 	if len(commentsReq) > 1 {
@@ -129,12 +132,14 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 	if err != nil {
 		return commentResp, fmt.Errorf("CommentRepository - GetMany - build sql: %w", err)
 	}
-	c.logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
+	logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
 
+	logger.Debug("executing sql statement...")
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return commentResp, err
 	}
+	logger.Debug("sql statement was executed successfully")
 
 	for rows.Next() {
 		err := rows.Scan(
@@ -143,7 +148,9 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 		if err != nil {
 			return commentResp, fmt.Errorf("CommentRepository - GetMany - row scan: %w", err)
 		}
+		logger.Debug("converting comment model to dto...")
 		curCommentDto := converter.CommentFromRepo(commentModel)
+		logger.Debug("model was converted successfully")
 
 		commentResp = append(commentResp, curCommentDto)
 	}
@@ -159,18 +166,25 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 // Insert implements repo.CommentRepo.
 func (c *CommentRepository) Insert(ctx context.Context, newComment dto.NewComment) (*dto.Comment, error) {
 	commentResp := &model.Comment{}
+	logger := c.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("initialize transaction...")
 	tx, err := c.db.PgxPool.Begin(ctx)
 	if err != nil {
 		return &dto.Comment{}, fmt.Errorf("CommentRepository - Insert - begin tx: %w", err)
 	}
+	logger.Debug("transation was initialized successfully")
 	defer func() {
 		if err != nil {
+			logger.Debug("error was handled, rollback transaction")
 			tx.Rollback(ctx)
 			return
 		}
+		logger.Debug("transaction was committed successfully")
 		err = tx.Commit(ctx)
 	}()
 
+	logger.Debug("building sql...")
 	sql, args, err := c.db.Builder.
 		Insert(commentTable).
 		Columns("_text", "article_id", "parent_id").
@@ -182,7 +196,9 @@ func (c *CommentRepository) Insert(ctx context.Context, newComment dto.NewCommen
 	if err != nil {
 		return &dto.Comment{}, fmt.Errorf("CommentRepository - Insert - build sql: %w", err)
 	}
+	logger.Debug("sql was builded successfully", slog.String("sql", sql), slog.Any("args", args))
 
+	logger.Debug("executing sql statement...")
 	row := tx.QueryRow(ctx, sql, args...)
 	err = row.Scan(
 		&commentResp.Id, &commentResp.Text,
@@ -192,7 +208,11 @@ func (c *CommentRepository) Insert(ctx context.Context, newComment dto.NewCommen
 	if err != nil {
 		return &dto.Comment{}, fmt.Errorf("CommentRepository - Insert - scanL %w", err)
 	}
+	logger.Debug("sql statement was executed successfully")
+
+	logger.Debug("converting comment model to dto...")
 	commentRespDto := converter.CommentFromRepo(commentResp)
+	logger.Debug("model was converted successfully")
 
 	return commentRespDto, nil
 }

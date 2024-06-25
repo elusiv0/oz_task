@@ -1,5 +1,5 @@
 services:
-  application:
+  service:
     build: ./
     command: ./oz_task
     ports:
