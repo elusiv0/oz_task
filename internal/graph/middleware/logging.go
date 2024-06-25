@@ -12,7 +12,7 @@ const (
 	operationContextKey = "operationContext"
 )
 
-func LoggingMiddleware(logger *slog.Logger) graphql.ResponseMiddleware {
+func ResponseMiddleware(logger *slog.Logger) graphql.ResponseMiddleware {
 	return func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
 		resp := next(ctx)
 		reqUuid := middleware.GetUuid(ctx)

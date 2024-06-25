@@ -6,6 +6,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	gqlconv "github.com/elusiv0/oz_task/internal/converter/gql"
@@ -24,10 +25,48 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.NewPost) 
 	if err != nil {
 		r.logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreatePost: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return postResp, gqlErr
+		return nil, gqlErr
 	}
 
 	return postResp, nil
+}
+
+// CreateComment implements graph.MutationResolver.
+func (r *mutationResolver) CreateComment(ctx context.Context, input model.NewComment) (*model.Comment, error) {
+	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
+
+	logger.Debug("calling post service...")
+	post, err := r.postService.Get(ctx, input.ArticleID)
+	if err != nil {
+		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		var customErr *model.CustomError
+		if errors.As(err, &customErr) {
+			err = model.NewCustomError(CreateCommentPostNotFound, input)
+		}
+		gqlErr := handleError(ctx, err)
+		return nil, gqlErr
+	}
+	if post.Closed {
+		err := model.NewCustomError(CreateCommentPostClosedErr, input)
+		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
+		gqlErr := handleError(ctx, err)
+		return nil, gqlErr
+	}
+
+	logger.Debug("calling comment service...")
+	commentResp, err := r.commentService.Insert(ctx, input)
+	if err != nil {
+		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
+		gqlErr := handleError(ctx, err)
+		return nil, gqlErr
+	}
+
+	logger.Debug("sending comment response to subscribe channel...")
+	for _, ch := range r.postsSubscribers[commentResp.ArticleID] {
+		ch <- commentResp
+	}
+
+	return commentResp, nil
 }
 
 // Posts is the resolver for the posts field.
@@ -44,7 +83,7 @@ func (r *queryResolver) Posts(ctx context.Context, first *int, after *int) (*gra
 	if err != nil {
 		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Posts: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return &graph.PostConnection{}, gqlErr
+		return nil, gqlErr
 	}
 
 	logger.Debug("converting post response to post connection...")
@@ -62,7 +101,7 @@ func (r *queryResolver) Post(ctx context.Context, id *int) (*model.Post, error) 
 	if err != nil {
 		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return postResp, gqlErr
+		return nil, gqlErr
 	}
 
 	return postResp, nil
@@ -77,7 +116,7 @@ func (r *queryResolver) Comment(ctx context.Context, id *int) (*model.Comment, e
 	if err != nil {
 		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - Post: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return commentResp, gqlErr
+		return nil, gqlErr
 	}
 
 	return commentResp, nil

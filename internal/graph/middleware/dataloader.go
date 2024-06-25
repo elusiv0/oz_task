@@ -7,6 +7,7 @@ import (
 
 	"github.com/elusiv0/oz_task/internal/dto"
 	"github.com/elusiv0/oz_task/internal/graph/dataloader"
+	repo "github.com/elusiv0/oz_task/internal/repo"
 	"github.com/elusiv0/oz_task/internal/service"
 )
 
@@ -21,9 +22,13 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 			Wait:     5 * time.Millisecond,
 			Fetch: func(commentReqs []dto.GetCommentsRequest) ([][]*dto.Comment, []error) {
 				mapReqIndex := make(map[int]int)
+				byParent := false
+				if commentReqs[0].ParentId != nil {
+					byParent = true
+				}
 				for idx, val := range commentReqs {
 					insertIdx := 0
-					if val.ParentId != nil {
+					if byParent {
 						insertIdx = *val.ParentId
 					} else {
 						insertIdx = *val.PostId
@@ -31,29 +36,33 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 					mapReqIndex[insertIdx] = idx
 				}
 				comments := make(map[int]bool)
-				commentsDto := make([][]*dto.Comment, len(commentReqs))
+				errorsResp := make([]error, len(commentReqs))
+				commentsResp := make([][]*dto.Comment, len(commentReqs))
 
-				commentResp, err := s.GetMany(r.Context(), commentReqs...)
+				commentsPool, err := s.GetMany(r.Context(), commentReqs...)
 				if err != nil {
-					return [][]*dto.Comment{}, []error{err}
+					for idx, _ := range errorsResp {
+						errorsResp[idx] = err
+					}
+					return commentsResp, errorsResp
 				}
 				last := 0
 				prev := -1
-				for idx := 0; idx < len(commentResp); idx++ {
-					val := commentResp[idx]
-					if commentReqs[0].ParentId != nil {
-						_, ok := comments[*val.ParentID]
-						if !ok || idx+1 == len(commentResp) {
-							insertIdx := idx
-							if idx+1 == len(commentResp) {
-								insertIdx++
-							}
+				cplen := len(commentsPool)
 
-							if insertIdx != 0 {
-								prev = *commentResp[insertIdx-1].ParentID
-								commentsDto[mapReqIndex[prev]] = commentResp[last:insertIdx]
-								last = idx
-							}
+				for idx := 0; idx < cplen; idx++ {
+					val := commentsPool[idx]
+					if byParent {
+						_, ok := comments[*val.ParentID]
+						if !ok && idx != 0 {
+							insertIdx := idx
+
+							prev = *(commentsPool[insertIdx-1].ParentID)
+							commentsResp[mapReqIndex[prev]] = commentsPool[last:insertIdx]
+							last = idx
+						}
+						if idx+1 == cplen {
+							commentsResp[mapReqIndex[*val.ParentID]] = commentsPool[last:]
 						}
 						if ok {
 							continue
@@ -61,17 +70,18 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 						comments[*val.ParentID] = true
 					} else {
 						_, ok := comments[val.ArticleID]
-						if !ok || idx+1 == len(commentResp) {
+						if !ok && idx != 0 {
 							insertIdx := idx
-							if idx+1 == len(commentResp) {
+							if idx+1 == cplen {
 								insertIdx++
 							}
 
-							if insertIdx != 0 {
-								prev = commentResp[insertIdx-1].ArticleID
-								commentsDto[mapReqIndex[prev]] = commentResp[last:insertIdx]
-								last = idx
-							}
+							prev = commentsPool[insertIdx-1].ArticleID
+							commentsResp[mapReqIndex[prev]] = commentsPool[last:insertIdx]
+							last = idx
+						}
+						if idx+1 == cplen {
+							commentsResp[mapReqIndex[val.ArticleID]] = commentsPool[last:]
 						}
 						if ok {
 							continue
@@ -79,9 +89,13 @@ func DataloaderMiddleware(s service.CommentService, next http.Handler) http.Hand
 						comments[val.ArticleID] = true
 					}
 				}
-				errorsResp := make([]error, len(commentReqs))
 
-				return commentsDto, errorsResp
+				for idx, val := range commentsResp {
+					if len(val) == 0 {
+						errorsResp[idx] = dto.NewCustomError(repo.CommentsNotFoundErr, commentReqs[idx])
+					}
+				}
+				return commentsResp, errorsResp
 			},
 		}
 		commentLoader := dataloader.NewCommentLoader(commentLoaderConfig)

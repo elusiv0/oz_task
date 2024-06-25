@@ -30,40 +30,13 @@ func (r *postResolver) Comments(ctx context.Context, obj *model.Post, first *int
 	if err != nil {
 		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return &graph.CommentConnection{}, gqlErr
+		return nil, gqlErr
 	}
 
 	logger.Debug("converting comment response to post connection...")
 	commentConn := gqlconv.ToCommentConnection(commentsResp, commentsReq.First, commentsReq.After)
 
 	return commentConn, nil
-}
-
-// CreateComment is the resolver for the createComment field.
-func (r *postResolver) CreateComment(ctx context.Context, obj *model.Post, input model.NewComment) (*model.Comment, error) {
-	logger := r.logger.With(slog.String("request_id", middleware.GetUuid(ctx)))
-	if obj.Closed {
-		err := model.NewCustomError(PostClosedErr, nil)
-		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
-		gqlErr := handleError(ctx, err)
-		return &model.Comment{}, gqlErr
-	}
-	input.ArticleID = obj.ID
-
-	logger.Debug("calling comment service...")
-	commentResp, err := r.commentService.Insert(ctx, input)
-	if err != nil {
-		logger.Warn("Error was handled", slog.String("Cause", "mutationResolver - CreateComment: "+err.Error()))
-		gqlErr := handleError(ctx, err)
-		return commentResp, gqlErr
-	}
-
-	logger.Debug("sending comment response to subscribe channel...")
-	for _, ch := range r.postsSubscribers[commentResp.ArticleID] {
-		ch <- commentResp
-	}
-
-	return commentResp, nil
 }
 
 // Post returns graph.PostResolver implementation.

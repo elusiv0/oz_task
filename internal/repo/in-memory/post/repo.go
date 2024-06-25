@@ -70,7 +70,7 @@ func (p *PostRepository) GetMany(ctx context.Context, postsReq dto.GetPostsReque
 		postsDto = append(postsDto, curPostDto)
 	}
 
-	if len(postsDto) < 2 {
+	if len(postsDto) == 0 {
 		return postsDto, dto.NewCustomError(repo.PostsNotFoundErr, postsReq)
 	}
 

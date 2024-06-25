@@ -135,6 +135,7 @@ func (p *PostRepository) GetMany(ctx context.Context, postsReq dto.GetPostsReque
 	if err != nil {
 		return postResp, err
 	}
+	defer rows.Close()
 	logger.Debug("sql statement was executed successfully")
 
 	for rows.Next() {
@@ -155,7 +156,7 @@ func (p *PostRepository) GetMany(ctx context.Context, postsReq dto.GetPostsReque
 		postResp = append(postResp, currPostDto)
 	}
 
-	if len(postResp) < 2 {
+	if len(postResp) == 0 {
 		return postResp, dto.NewCustomError(repo.PostsNotFoundErr, postsReq)
 	}
 

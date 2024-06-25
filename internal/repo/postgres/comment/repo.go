@@ -82,7 +82,7 @@ func (c *CommentRepository) Get(ctx context.Context, id int) (*dto.Comment, erro
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			cErr := dto.NewCustomError(repo.CommentsNotFoundErr, id)
+			cErr := dto.NewCustomError(repo.CommentsNotFoundErr, map[string]int{"id": id})
 			err = cErr
 		}
 		return commentResp, err
@@ -140,7 +140,7 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 		return commentResp, err
 	}
 	logger.Debug("sql statement was executed successfully")
-
+	defer rows.Close()
 	for rows.Next() {
 		err := rows.Scan(
 			scanRows...,
@@ -155,11 +155,12 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 		commentResp = append(commentResp, curCommentDto)
 	}
 
-	if len(commentResp) < 2 && len(commentsReq) == 1 {
+	if len(commentResp) == 0 && len(commentsReq) == 1 {
 		cErr := dto.NewCustomError(repo.CommentsNotFoundErr, commentsReq[0])
 
 		return commentResp, cErr
 	}
+
 	return commentResp, nil
 }
 

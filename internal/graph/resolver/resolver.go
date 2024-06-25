@@ -16,7 +16,11 @@ import (
 )
 
 var (
-	PostClosedErr = model.ErrInfo{
+	CreateCommentPostNotFound = model.ErrInfo{
+		ErrorMessage: "couldn't get required post with provided id",
+		StatusCode:   http.StatusBadRequest,
+	}
+	CreateCommentPostClosedErr = model.ErrInfo{
 		ErrorMessage: "post closed to add comments",
 		StatusCode:   http.StatusForbidden,
 	}
@@ -56,6 +60,9 @@ func handleError(ctx context.Context, err error) error {
 	}
 	if errors.As(cause, &customError) {
 		cErr := cause.(*model.CustomError)
+		if cErr.GetStatus() == http.StatusNoContent {
+			return nil
+		}
 		gqlErr = gqlconv.ToGqlError(ctx, cErr)
 	}
 

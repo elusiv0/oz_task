@@ -18,8 +18,8 @@ type CommentConnection {
 }
 
 input NewComment {
-  text: String! @length(max: 10)
-  articleId: ID
+  text: String! @length(max: 150)
+  articleId: ID!
   parentId: ID
 }
 

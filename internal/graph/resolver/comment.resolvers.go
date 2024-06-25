@@ -30,7 +30,7 @@ func (r *commentResolver) Comments(ctx context.Context, obj *model.Comment, firs
 	if err != nil {
 		logger.Warn("Error was handled", slog.String("Cause", "PostResolver - Comments: "+err.Error()))
 		gqlErr := handleError(ctx, err)
-		return &graph.CommentConnection{}, gqlErr
+		return nil, gqlErr
 	}
 
 	logger.Debug("converting comment response to post connection...")

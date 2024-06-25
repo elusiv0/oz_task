@@ -111,10 +111,8 @@ func (c *CommentRepository) GetMany(ctx context.Context, commentsReq ...dto.GetC
 		}
 	}
 
-	if len(commentsResp) < 2 {
-		if len(commentsReq) == 1 {
-			return []*dto.Comment{}, dto.NewCustomError(repo.CommentsNotFoundErr, commentsReq[0])
-		}
+	if len(commentsResp) == 0 && len(commentsReq) == 1 {
+		return []*dto.Comment{}, dto.NewCustomError(repo.CommentsNotFoundErr, commentsReq[0])
 	}
 	return commentsResp, nil
 }
